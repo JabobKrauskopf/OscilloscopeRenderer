@@ -11,12 +11,16 @@ cap = cv2.VideoCapture(play.url)
 while True:
     ret, frame = cap.read()
     edges = cv2.Canny(frame, 100, 200)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 40, minLineLength=1, maxLineGap=40)
+    emptyImage = np.zeros((len(frame), len(frame[0]), 3), dtype=np.uint8)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 30, maxLineGap=10, minLineLength=10)
 
-    # for line in lines:
-    #     for x1, y1, x2, y2 in line:
-    #         cv2.line(edges, (x1, y1), (x2, y2), (255, 0, 0), 1)
-    cv2.imshow("frame", edges)
+    try:
+        for line in lines:
+            for x1, y1, x2, y2 in line:
+                cv2.line(emptyImage, (x1, y1), (x2, y2), (255, 0, 0), 1)
+    except TypeError:
+        pass
+    cv2.imshow("frame", emptyImage)
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
