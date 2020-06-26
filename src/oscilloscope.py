@@ -1,29 +1,52 @@
-import cv2
 import numpy as np
-import pafy
+import simpleaudio as sa
 
-url = 'https://www.youtube.com/watch?v=OqJBloDEwwY'
-vPafy = pafy.new(url)
-play = vPafy.getbest()
+A_freq = 120
 
-cap = cv2.VideoCapture(play.url)
+Csh_freq = A_freq * 2 ** (4 / 12)
 
-while True:
-    ret, frame = cap.read()
-    edges = cv2.Canny(frame, 100, 200)
-    emptyImage = np.zeros((len(frame), len(frame[0]), 3), dtype=np.uint8)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 10, maxLineGap=1, minLineLength=1)
+E_freq = A_freq * 2 ** (7 / 12)
 
-    try:
-        for line in lines:
-            for x1, y1, x2, y2 in line:
-                cv2.line(emptyImage, (x1, y1), (x2, y2), (255, 0, 0), 1)
-    except TypeError:
-        pass
-    emptyImage = cv2.resize(emptyImage, None, fx=1, fy=1)
-    cv2.imshow("frame", emptyImage)
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
+ka_freq = A_freq * 2 ** (12 / 12)
 
-cap.release()
-cv2.destroyAllWindows()
+sample_rate = 44100
+T = 360
+t = np.linspace(0, T, int(T * sample_rate), False)
+
+A_note = np.sin(A_freq * t * 2 * np.pi)
+Csh_note = np.sin(Csh_freq * t * 2 * np.pi)
+E_note = np.sin(E_freq * t * 2 * np.pi)
+ka_note = np.sin(ka_freq * t * 2 * np.pi)
+
+right_audio = A_note
+left_audio = E_note
+
+# right_audio = []
+# for i in range(len(left_audio)):
+#     right_audio.append(float(i) / len(left_audio))
+
+# right_audio = np.array(right_audio)
+
+# left_audio = Csh_note
+# right_audio = E_note
+
+# left_audio = A_note
+# right_audio = Csh_note
+
+# right_audio = A_note
+# left_audio = ka_note
+
+left_audio *= 32767 / 1 * np.max(np.abs(left_audio))
+right_audio *= 32767 / 1 * np.max(np.abs(right_audio))
+
+left_audio = left_audio.astype(np.int16)
+right_audio = right_audio.astype(np.int16)
+
+stereo_signal = np.zeros([int(sample_rate*T), 2], dtype=np.int16)
+stereo_signal[:, 1] = left_audio[:]
+stereo_signal[:, 0] = right_audio[:]
+print(stereo_signal)
+
+play_obj = sa.play_buffer(stereo_signal, 2, 2, sample_rate)
+
+play_obj.wait_done()
