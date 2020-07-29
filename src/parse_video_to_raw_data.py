@@ -2,9 +2,9 @@ import cv2
 import numpy as np
 import pafy
 import datetime
-import json
 import os
 import re
+import threading
 
 url = 'https://www.youtube.com/watch?v=VYOjWnS4cMY'
 vPafy = pafy.new(url)
@@ -18,32 +18,96 @@ cap = cv2.VideoCapture(video.url)
 
 startTime = datetime.datetime.now()
 
-def find_starting_point(matrix):
-    for (x,y), value in np.ndenumerate(matrix):
-        if value > 0:
-            return (x, y)
 
-def depth_first_search(visited, image, point):
-    visited[point[0]][point[1]] = True
+def find_starting_point(drawn_pixels: np.array, visited_pixels: np.array, last_pixel: np.array):
+    # print(last_pixel)
+    if last_pixel is None:
+        return drawn_pixels[0]
+    smallest_distance = 1000000
+    smallest_distance_pixel = None
+
+    index = 0
+    for pixel in drawn_pixels:
+        if not visited_pixels[pixel[0]][pixel[1]]:
+            distance = (last_pixel[0]-pixel[0])**2 + (last_pixel[1]-pixel[1])**2
+            if distance < smallest_distance:
+                smallest_distance = distance
+                smallest_distance_pixel = pixel
+            if index > 200 and smallest_distance_pixel is not None:
+                return smallest_distance_pixel
+            index += 1
+    return smallest_distance_pixel
+
+
+def depth_first_search(visited: np.array, image: np.array, point: tuple, path: list):
+    x, y = point
+    if visited[x][y] or image[x][y] <= 0:
+        return
+    path.append((x, y))
+    visited[x][y] = True
+    if x - 1 >= 0:
+        depth_first_search(visited, image, (x-1, y), path)
+    if x + 1 < len(visited):
+        depth_first_search(visited, image, (x+1, y), path)
+    if y - 1 >= 0:
+        depth_first_search(visited, image, (x, y-1), path)
+    if y + 1 < len(visited[0]):
+        depth_first_search(visited, image, (x, y+1), path)
+    path.append((x, y))
+
+
+def convert_image(image, frame_number):
+    emptyImage = np.zeros((len(image), len(image[0]), 3), dtype=np.uint8)
+    if np.sum(image) > 0:
+        path = []
+        drawn_pixels = np.argwhere(image > 0)
+        np.random.shuffle(drawn_pixels)
+        visited_pixels = np.full((len(image), len(image[0])), False)
+        starting_point = None
+        while(np.count_nonzero(visited_pixels) != len(drawn_pixels)):
+            starting_point = find_starting_point(drawn_pixels, visited_pixels, starting_point)
+            depth_first_search(visited_pixels, image, starting_point, path)
+        for index in range(1, len(path)):
+            cv2.line(emptyImage, (path[index-1][1], path[index-1][0]), (path[index][1], path[index][0]), (255,255,255))
+    cv2.imwrite(os.path.join(title, str(frame_number) + ".jpg"), emptyImage)
+
 
 frame_number = 0
+frames = []
 while True:
     ret, frame = cap.read()
     if frame_number % 10 == 0:
         try:
             image = cv2.Canny(frame, 150, 200)
-            if np.sum(image) > 0:
-                visited_pixels = np.full((cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT), False)
-                starting_point = find_starting_point(image)
-                depth_first_search(visited_pixels, image, starting_point)
+            print('Saved image to stack ' + str(frame_number))
+            cv2.imshow("frame", image)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                cap.release()
+                cv2.destroyAllWindows()
+                break
+            frames.append(image)
         except:
-            cap.release()
+            print('Error')
             break
-        cv2.imshow("frame", image)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
             cap.release()
             cv2.destroyAllWindows()
-            break
     frame_number += 1
 
-print("This took " + str((datetime.datetime.now() - startTime).total_seconds()))
+frame_index = 0
+number_of_threads = 0
+threads = []
+for frame in frames:
+    x = threading.Thread(target=convert_image, args=(frame, frame_index))
+    threads.append(x)
+    frame_index += 1
+
+while(len(threads) > 0):
+    threads_cache = threads[:20]
+    for thread in threads_cache:
+        print("Taking image from stack")
+        thread.start()
+    for thread in threads_cache:
+        print("Finished")
+        thread.join()
+    print("Starting next job")
+    threads = threads[20:]
