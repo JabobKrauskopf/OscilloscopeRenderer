@@ -18,7 +18,7 @@ E_note = np.sin(E_freq * t * 2 * np.pi)
 ka_note = np.cos(ka_freq * t * 2 * np.pi)
 
 right_audio = A_note
-left_audio = ka_note
+left_audio = E_note
 
 # right_audio = []
 # for i in range(len(left_audio)):
