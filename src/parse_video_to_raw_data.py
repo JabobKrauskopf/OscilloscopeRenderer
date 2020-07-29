@@ -18,35 +18,32 @@ cap = cv2.VideoCapture(video.url)
 
 startTime = datetime.datetime.now()
 
-parsedJson = {'title': title, 'length': 0, 'sizeX': cap.get(cv2.CAP_PROP_FRAME_WIDTH), 'sizeY': cap.get(cv2.CAP_PROP_FRAME_HEIGHT), 'video_url': url, 'frames': []}
+def find_starting_point(matrix):
+    for (x,y), value in np.ndenumerate(matrix):
+        if value > 0:
+            return (x, y)
+
+def depth_first_search(visited, image, point):
+    visited[point[0]][point[1]] = True
 
 frame_number = 0
 while True:
     ret, frame = cap.read()
-    try:
-        edges = cv2.Canny(frame, 150, 200)
-        # parsedJson['frames'].append(points)
+    if frame_number % 10 == 0:
         try:
-            test = np.argwhere(edges > 0)
-            drawn_points = [[int(y) for y in x] for x in np.argwhere(edges > 0)]
-            parsedJson['frames'].append(drawn_points)
-        except ValueError:
-            pass
-        cv2.imwrite(os.path.join(title, str(frame_number) + ".jpg"), edges)
-        cv2.imshow("frame", edges)
+            image = cv2.Canny(frame, 150, 200)
+            if np.sum(image) > 0:
+                visited_pixels = np.full((cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT), False)
+                starting_point = find_starting_point(image)
+                depth_first_search(visited_pixels, image, starting_point)
+        except:
+            cap.release()
+            break
+        cv2.imshow("frame", image)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             cap.release()
             cv2.destroyAllWindows()
             break
-    except TypeError as e:
-        print(e)
-        cap.release()
-        break
     frame_number += 1
 
 print("This took " + str((datetime.datetime.now() - startTime).total_seconds()))
-
-parsedJson['length'] = len(parsedJson['frames'])
-
-with open('data.json', 'w') as f:
-    json.dump(parsedJson, f)
