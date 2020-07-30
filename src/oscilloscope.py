@@ -6,7 +6,7 @@ Csh_freq = A_freq * 2 ** (4 / 12)
 
 E_freq = A_freq * 2 ** (7 / 12)
 
-ka_freq = A_freq * 2 ** (1 / 1)
+ka_freq = 120
 
 sample_rate = 44100
 T = 360
