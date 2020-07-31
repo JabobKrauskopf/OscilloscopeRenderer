@@ -1,57 +1,55 @@
 import numpy as np
 import simpleaudio as sa
+import json
+import progressbar
+import wave
 
-A_freq = 60
-Csh_freq = A_freq * 2 ** (4 / 12)
+sample_rate = 192000
 
-E_freq = A_freq * 2 ** (7 / 12)
+with open('Webcam.json') as json_file:
+    data = json.load(json_file)
 
-ka_freq = 120
+frames = data['frames']
 
-sample_rate = 44100
-T = 360
-t = np.linspace(0, T, int(T * sample_rate), False)
+left_audio = np.array([])
+right_audio = np.array([])
 
-A_note = np.sin(A_freq * t * 2 * np.pi)
-Csh_note = np.sin(Csh_freq * t * 2 * np.pi)
-E_note = np.sin(E_freq * t * 2 * np.pi)
-ka_note = np.cos(ka_freq * t * 2 * np.pi)
+bar = progressbar.ProgressBar(maxval=len(frames), widgets=[progressbar.Bar('=',
+                              '[', ']'), ' ', progressbar.Percentage()])
+bar.start()
 
-right_audio = A_note
-left_audio = E_note
-
-# right_audio = []
-# for i in range(len(left_audio)):
-#     right_audio.append(float(i) / len(left_audio))
-
-# right_audio = np.array(right_audio)
-
-# left_audio = Csh_note
-# right_audio = E_note
-
-# left_audio = A_note
-# right_audio = Csh_note
-
-# right_audio = A_note
-# left_audio = ka_note
-
-print(left_audio)
-
-left_audio *= 32767 / 1 * np.max(np.abs(left_audio))
-right_audio *= 32767 / 1 * np.max(np.abs(right_audio))
-
-print(left_audio)
+for num, frame in enumerate(frames):
+    try:
+        left, right = zip(*frame)
+        local_left = np.array(left).astype(np.float64)
+        local_left = local_left - np.median(local_left)
+        local_left = np.tile(local_left, 5)
+        local_right = np.array(right).astype(np.float64)
+        local_right = local_right - np.median(local_right)
+        local_right = np.tile(local_right, 5)
+        local_left *= -18431 / (1 * np.max(np.abs(local_left)))
+        local_right *= 32767 / (1 * np.max(np.abs(local_right)))
+        left_audio = np.append(left_audio, local_left)
+        right_audio = np.append(right_audio, local_right)
+    except ValueError:
+        pass
+    bar.update(num)
+bar.finish()
 
 left_audio = left_audio.astype(np.int16)
 right_audio = right_audio.astype(np.int16)
 
-print(left_audio)
-
-stereo_signal = np.zeros([int(sample_rate*T), 2], dtype=np.int16)
+stereo_signal = np.zeros([int(len(left_audio)), 2], dtype=np.int16)
 stereo_signal[:, 1] = left_audio[:]
 stereo_signal[:, 0] = right_audio[:]
-print(stereo_signal)
 
 play_obj = sa.play_buffer(stereo_signal, 2, 2, sample_rate)
 
 play_obj.wait_done()
+
+obj = wave.open(str(data['title']) + ".wav", 'w')
+obj.setnchannels(2)
+obj.setsampwidth(2)
+obj.setframerate(sample_rate)
+obj.writeframesraw(stereo_signal)
+obj.close()

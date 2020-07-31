@@ -7,7 +7,7 @@ import re
 import threading
 import json
 
-url = 'https://www.youtube.com/watch?v=64X4cuAR2fI'
+url = 'https://www.youtube.com/watch?v=VYOjWnS4cMY'
 vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub("\s", "_", video.title)
@@ -79,7 +79,7 @@ def depth_first_search(visited: np.array, image: np.array, point: tuple, path: l
     if branches > 1:
         cache_path.append([int(x), int(y)])
     cache = max(maximum_depth_array)
-    if iteration_depth == 1 and cache < 5:
+    if iteration_depth == 1 and cache < 2:
         return path, visited, cache
     path += cache_path
     return path, visited, cache
@@ -117,7 +117,7 @@ while True:
     ret, frame = cap.read()
     if frame_number % 10 == 0:
         try:
-            image = cv2.Canny(frame, 150, 200)
+            image = cv2.Canny(frame, 50, 200)
             print('Saved image to stack ' + str(frame_number))
             cv2.imshow("frame", image)
             if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -151,5 +151,5 @@ while(len(threads) > 0):
     print("Starting next job")
     threads = threads[20:]
 
-with open(video.title, 'w') as outfile:
+with open(title + ".json", 'w') as outfile:
     json.dump(parsed_json, outfile)
