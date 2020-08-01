@@ -22,11 +22,11 @@ for num, frame in enumerate(frames):
     try:
         left, right = zip(*frame)
         local_left = np.array(left).astype(np.float64)
-        local_left = local_left - np.median(local_left)
-        local_left = np.tile(local_left, 5)
+        local_left = local_left - data['sizeY']
+        # local_left = np.tile(local_left, 5)
         local_right = np.array(right).astype(np.float64)
-        local_right = local_right - np.median(local_right)
-        local_right = np.tile(local_right, 5)
+        local_right = local_right - data['sizeX']
+        # local_right = np.tile(local_right, 5)
         local_left *= -18431 / (1 * np.max(np.abs(local_left)))
         local_right *= 32767 / (1 * np.max(np.abs(local_right)))
         left_audio = np.append(left_audio, local_left)

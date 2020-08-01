@@ -12,14 +12,16 @@ vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub("\s", "_", video.title)
 
+title = "Webcam"
+
 if not os.path.exists(title):
     os.makedirs(title)
 
-cap = cv2.VideoCapture(video.url)
+cap = cv2.VideoCapture(0)
 
 startTime = datetime.datetime.now()
 
-parsed_json = {"title": video.title, "frames": []}
+parsed_json = {"title": title, "sizeX": 0, "sizeY": 0, "frames": []}
 
 
 def find_starting_point(drawn_pixels: np.array, visited_pixels: np.array, last_pixel: np.array):
@@ -86,6 +88,8 @@ def depth_first_search(visited: np.array, image: np.array, point: tuple, path: l
 
 
 def convert_image(image, frame_number):
+    parsed_json['sizeX'] = len(image[0])
+    parsed_json['sizeY'] = len(image)
     emptyImage = np.zeros((len(image), len(image[0]), 3), dtype=np.uint8)
     path = []
     if np.sum(image) > 0:
@@ -115,7 +119,7 @@ frame_number = 0
 frames = []
 while True:
     ret, frame = cap.read()
-    if frame_number % 10 == 0:
+    if frame_number % 2 == 0:
         try:
             image = cv2.Canny(frame, 50, 200)
             print('Saved image to stack ' + str(frame_number))
