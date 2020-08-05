@@ -8,15 +8,14 @@ import threading
 import json
 import sys
 
-url = 'https://www.youtube.com/watch?v=CLzUtMiq1N4'
+number_of_threads = 30
+
+url = 'https://www.youtube.com/watch?v=iNagL1l81YY'
 vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub("\s", "_", video.title)
 
 sys.setrecursionlimit(10000)
-
-if not os.path.exists(title):
-    os.makedirs(title)
 
 cap = cv2.VideoCapture(video.url)
 
@@ -134,7 +133,6 @@ while True:
     frame_number += 1
 
 frame_index = 0
-number_of_threads = 0
 threads = []
 for frame in frames:
     x = threading.Thread(target=convert_image, args=(frame, frame_index))
@@ -142,7 +140,7 @@ for frame in frames:
     frame_index += 1
 
 while(len(threads) > 0):
-    threads_cache = threads[:20]
+    threads_cache = threads[:number_of_threads]
     for thread in threads_cache:
         print("Taking image from stack")
         thread.start()
@@ -150,7 +148,7 @@ while(len(threads) > 0):
         print("Finished")
         thread.join()
     print("Starting next job")
-    threads = threads[20:]
+    threads = threads[number_of_threads:]
 
 with open(title + ".json", 'w') as outfile:
     json.dump(parsed_json, outfile)
