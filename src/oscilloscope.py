@@ -46,7 +46,7 @@ for num, frame in enumerate(frames):
             local_right = np.array(right_cache).astype(np.float64)
         local_left = local_left - (data['sizeY'] / 2)
         local_right = local_right - (data['sizeX'] / 2)
-        local_left *= -18431 / (1 * np.max(np.abs(local_left)))
+        local_left *= -int(32767 * (data['sizeY'] / data['sizeX'])) / (1 * np.max(np.abs(local_left)))
         local_right *= 32767 / (1 * np.max(np.abs(local_right)))
         left_audio = np.append(left_audio, local_left)
         right_audio = np.append(right_audio, local_right)
