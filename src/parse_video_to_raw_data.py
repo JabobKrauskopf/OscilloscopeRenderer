@@ -6,22 +6,23 @@ import os
 import re
 import threading
 import json
+import sys
 
-url = 'https://www.youtube.com/watch?v=VYOjWnS4cMY'
+url = 'https://www.youtube.com/watch?v=CLzUtMiq1N4'
 vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub("\s", "_", video.title)
 
-title = "Webcam"
+sys.setrecursionlimit(10000)
 
 if not os.path.exists(title):
     os.makedirs(title)
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(video.url)
 
 startTime = datetime.datetime.now()
 
-parsed_json = {"title": title, "sizeX": 0, "sizeY": 0, "frames": []}
+parsed_json = {"title": title, "sizeX": None, "sizeY": None, "frames": []}
 
 
 def find_starting_point(drawn_pixels: np.array, visited_pixels: np.array, last_pixel: np.array):
@@ -90,7 +91,6 @@ def depth_first_search(visited: np.array, image: np.array, point: tuple, path: l
 def convert_image(image, frame_number):
     parsed_json['sizeX'] = len(image[0])
     parsed_json['sizeY'] = len(image)
-    emptyImage = np.zeros((len(image), len(image[0]), 3), dtype=np.uint8)
     path = []
     if np.sum(image) > 0:
         drawn_pixels = np.argwhere(image > 0)
@@ -101,9 +101,6 @@ def convert_image(image, frame_number):
             last_point = starting_point if len(path) == 0 else path[-1]
             starting_point = find_starting_point(drawn_pixels, visited_pixels, last_point)
             path, visited_pixels, _ = depth_first_search(visited_pixels, image, starting_point, path, 0)
-        for index in range(1, len(path)):
-            cv2.line(emptyImage, (path[index-1][1], path[index-1][0]), (path[index][1], path[index][0]), (255,255,255))
-    cv2.imwrite(os.path.join(title, str(frame_number) + ".jpg"), emptyImage)
     parsed_json['frames'].insert(frame_number, path)
 
 
@@ -121,7 +118,7 @@ while True:
     ret, frame = cap.read()
     if frame_number % 2 == 0:
         try:
-            image = cv2.Canny(frame, 50, 200)
+            image = cv2.Canny(frame, 100, 300)
             print('Saved image to stack ' + str(frame_number))
             cv2.imshow("frame", image)
             if cv2.waitKey(1) & 0xFF == ord("q"):

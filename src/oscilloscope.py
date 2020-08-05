@@ -6,7 +6,11 @@ import wave
 
 sample_rate = 192000
 
-with open('Webcam.json') as json_file:
+fps = 30
+
+samples_per_frame = int(sample_rate / fps)
+
+with open('Childish_Gambino_-_This_Is_America_(Official_Video).json') as json_file:
     data = json.load(json_file)
 
 frames = data['frames']
@@ -21,9 +25,26 @@ bar.start()
 for num, frame in enumerate(frames):
     try:
         left, right = zip(*frame)
-        local_left = np.array(left)[::3].astype(np.float64)
+        if len(left) > samples_per_frame:
+            local_left = np.array(left)[::int(len(left) / samples_per_frame)].astype(np.float64)
+            local_right = np.array(right)[::int(len(left) / samples_per_frame)].astype(np.float64)
+        else:
+            left_cache = [left[0]]
+            divident = int(samples_per_frame / len(left))
+            for index in range(1, len(left)):
+                last_point = left[index-1]
+                distance = left[index] - last_point
+                for index2 in range(divident):
+                    left_cache.append(left[index] + ((distance / divident) * (1+index2)))
+            right_cache = [right[0]]
+            for index in range(1, len(right)):
+                last_point = right[index-1]
+                distance = right[index] - last_point
+                for index2 in range(divident):
+                    right_cache.append(right[index] + ((distance / divident) * (1+index2)))
+            local_left = np.array(left_cache).astype(np.float64)
+            local_right = np.array(right_cache).astype(np.float64)
         local_left = local_left - (data['sizeY'] / 2)
-        local_right = np.array(right))[::3].astype(np.float64)
         local_right = local_right - (data['sizeX'] / 2)
         local_left *= -18431 / (1 * np.max(np.abs(local_left)))
         local_right *= 32767 / (1 * np.max(np.abs(local_right)))
