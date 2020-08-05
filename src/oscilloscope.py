@@ -3,6 +3,7 @@ import simpleaudio as sa
 import json
 import progressbar
 import wave
+import os
 
 sample_rate = 192000
 
@@ -10,16 +11,18 @@ fps = 30
 
 samples_per_frame = int(sample_rate / fps)
 
-with open('Childish_Gambino_-_This_Is_America_(Official_Video).json') as json_file:
+with open('Stuck In the Sound - Let\'s Go [Official Video].json') as json_file:
     data = json.load(json_file)
+
+if not os.path.exists('wav'):
+    os.makedirs('wav')
 
 frames = data['frames']
 
 left_audio = np.array([])
 right_audio = np.array([])
 
-bar = progressbar.ProgressBar(maxval=len(frames), widgets=[progressbar.Bar('=',
-                              '[', ']'), ' ', progressbar.Percentage()])
+bar = progressbar.ProgressBar(maxval=len(frames), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
 bar.start()
 
 for num, frame in enumerate(frames):
@@ -46,8 +49,8 @@ for num, frame in enumerate(frames):
             local_right = np.array(right_cache).astype(np.float64)
         local_left = local_left - (data['sizeY'] / 2)
         local_right = local_right - (data['sizeX'] / 2)
-        local_left *= -int(32767 * (data['sizeY'] / data['sizeX'])) / (1 * np.max(np.abs(local_left)))
-        local_right *= 32767 / (1 * np.max(np.abs(local_right)))
+        local_left *= -(32767 * (data['sizeY'] / data['sizeX'])) / data['sizeY']
+        local_right *= 32767 / data['sizeX']
         left_audio = np.append(left_audio, local_left)
         right_audio = np.append(right_audio, local_right)
     except ValueError:
@@ -62,11 +65,7 @@ stereo_signal = np.zeros([int(len(left_audio)), 2], dtype=np.int16)
 stereo_signal[:, 1] = left_audio[:]
 stereo_signal[:, 0] = right_audio[:]
 
-play_obj = sa.play_buffer(stereo_signal, 2, 2, sample_rate)
-
-play_obj.wait_done()
-
-obj = wave.open(str(data['title']) + ".wav", 'w')
+obj = wave.open(os.path.join("wav", str(data['title']) + ".wav"), 'w')
 obj.setnchannels(2)
 obj.setsampwidth(2)
 obj.setframerate(sample_rate)

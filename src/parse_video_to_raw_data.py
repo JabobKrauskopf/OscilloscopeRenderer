@@ -10,10 +10,11 @@ import sys
 
 number_of_threads = 30
 
-url = 'https://www.youtube.com/watch?v=iNagL1l81YY'
+url = 'https://www.youtube.com/watch?v=JUbHn7egKHs'
 vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub("\s", "_", video.title)
+title = re.sub(r"\"", "", title)
 
 sys.setrecursionlimit(10000)
 
@@ -21,7 +22,10 @@ cap = cv2.VideoCapture(video.url)
 
 startTime = datetime.datetime.now()
 
-parsed_json = {"title": title, "sizeX": None, "sizeY": None, "frames": []}
+parsed_json = {"title": title, "sizeX": None, "sizeY": None, "frames": [], "length": vPafy.length}
+
+if not os.path.exists('json'):
+    os.makedirs('json')
 
 
 def find_starting_point(drawn_pixels: np.array, visited_pixels: np.array, last_pixel: np.array):
@@ -38,7 +42,7 @@ def find_starting_point(drawn_pixels: np.array, visited_pixels: np.array, last_p
             if distance < smallest_distance:
                 smallest_distance = distance
                 smallest_distance_pixel = pixel
-            if index > 400 and smallest_distance_pixel is not None:
+            if index > 150 and smallest_distance_pixel is not None:
                 return smallest_distance_pixel
             index += 1
     return smallest_distance_pixel
@@ -103,21 +107,13 @@ def convert_image(image, frame_number):
     parsed_json['frames'].insert(frame_number, path)
 
 
-def auto_canny(image, sigma=0.33):
-    v = np.median(image)
-    lower = int(max(0, (1.0 - sigma) * v))
-    upper = int(min(255, (1.0 + sigma) * v))
-    edged = cv2.Canny(image, lower, upper)
-    return edged
-
-
 frame_number = 0
 frames = []
 while True:
     ret, frame = cap.read()
     if frame_number % 2 == 0:
         try:
-            image = cv2.Canny(frame, 100, 300)
+            image = cv2.Canny(frame, 50, 200)
             print('Saved image to stack ' + str(frame_number))
             cv2.imshow("frame", image)
             if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -150,5 +146,5 @@ while(len(threads) > 0):
     print("Starting next job")
     threads = threads[number_of_threads:]
 
-with open(title + ".json", 'w') as outfile:
+with open(os.path.join("json", title + ".json"), 'w') as outfile:
     json.dump(parsed_json, outfile)
