@@ -1,10 +1,8 @@
 {
   "recommendations": [
-      "esbenp.prettier-vscode",
-      "dbaeumer.vscode-eslint",
-      "editorconfig.editorconfig",
-      "mquandalle.graphql",
-      "eamodio.gitlens"
-  ],
-  "unwantedRecommendations": ["hookyqr.beautify", "dbaeumer.jshint"]
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "editorconfig.editorconfig",
+    "eamodio.gitlens"
+  ]
 }
