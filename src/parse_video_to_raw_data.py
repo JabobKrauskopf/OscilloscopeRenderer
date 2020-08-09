@@ -11,7 +11,7 @@ import sys
 
 number_of_threads = 30
 
-url = "https://www.youtube.com/watch?v=u1oHeraRxEw"
+url = "https://www.youtube.com/watch?v=VYOjWnS4cMY"
 vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub(r"\s", "_", video.title)
@@ -38,7 +38,6 @@ if not os.path.exists("json"):
 def find_starting_point(
     drawn_pixels: np.array, visited_pixels: np.array, last_pixel: np.array
 ):
-    # print(last_pixel)
     if last_pixel is None:
         return drawn_pixels[0]
     smallest_distance = 1000000000
@@ -52,13 +51,17 @@ def find_starting_point(
                 smallest_distance = distance
                 smallest_distance_pixel = pixel
             if index > 150 and smallest_distance_pixel is not None:
-                return smallest_distance_pixel
+                break
             index += 1
     return smallest_distance_pixel
 
 
 def depth_first_search(
-    visited: np.array, image: np.array, point: tuple, path: list, iteration_depth: int
+    visited: np.array,
+    image: np.array,
+    point: tuple,
+    path: list,
+    iteration_depth: int,
 ):
     x, y = point
     if visited[x][y] or image[x][y] <= 0:
@@ -124,16 +127,17 @@ def convert_image(image, frame_number):
     path = []
     if np.sum(image) > 0:
         drawn_pixels = np.argwhere(image > 0)
+        length = len(drawn_pixels)
         np.random.shuffle(drawn_pixels)
         visited_pixels = np.full((len(image), len(image[0])), False)
         starting_point = None
-        while np.count_nonzero(visited_pixels) != len(drawn_pixels):
+        while np.count_nonzero(visited_pixels) != length:
             last_point = starting_point if len(path) == 0 else path[-1]
             starting_point = find_starting_point(
                 drawn_pixels, visited_pixels, last_point
             )
             path, visited_pixels, _ = depth_first_search(
-                visited_pixels, image, starting_point, path, 0
+                visited_pixels, image, tuple(starting_point), path, 0
             )
     parsed_json["frames"].insert(frame_number, path)
 
@@ -144,17 +148,17 @@ while True:
     ret, frame = cap.read()
     if frame_number % 2 == 0:
         try:
-            image = cv2.Canny(frame, 50, 200)
-            image = cv2.resize(
-                image, (int(480 * (len(image[0]) / len(image))), int(480))
+            canny_image = cv2.Canny(frame, 50, 200)
+            canny_image = cv2.resize(
+                canny_image, (int(360 * (len(canny_image[0]) / len(canny_image))), int(360))
             )
             print("Saved image to stack " + str(frame_number))
-            cv2.imshow("frame", image)
+            cv2.imshow("frame", canny_image)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 cap.release()
                 cv2.destroyAllWindows()
                 break
-            frames.append(image)
+            frames.append(canny_image)
         except:
             print("Finished saving images")
             cap.release()
@@ -169,12 +173,13 @@ for frame in frames:
     queued_threads.append(x)
     frame_index += 1
 running_threads = queued_threads[:number_of_threads]
+queued_threads = queued_threads[number_of_threads:]
 [thread.start() for thread in running_threads]
 
 with alive_bar(len(frames)) as bar:
     while len(running_threads) > 0:
         for thread in running_threads:
-            thread.join(0.01)
+            thread.join(0.001)
             if not thread.isAlive():
                 bar()
                 running_threads.remove(thread)
