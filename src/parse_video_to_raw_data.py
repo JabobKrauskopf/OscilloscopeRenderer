@@ -7,10 +7,11 @@ import re
 import threading
 import json
 import sys
+import progressbar
 
 number_of_threads = 30
 
-url = "https://www.youtube.com/watch?v=WNcsUNKlAKw"
+url = "https://www.youtube.com/watch?v=sdduPpnqre4"
 vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub(r"\s", "_", video.title)
@@ -152,12 +153,20 @@ while True:
                 break
             frames.append(image)
         except:
-            print("Error")
-            break
+            print("Finished saving images")
             cap.release()
             cv2.destroyAllWindows()
+            break
     frame_number += 1
 
+
+bar = progressbar.ProgressBar(
+    maxval=len(frames),
+    widgets=[progressbar.Bar("=", "[", "]"), " ", progressbar.Percentage()],
+)
+bar.start()
+
+progress_counter = 0
 frame_index = 0
 queued_threads = []
 for frame in frames:
@@ -171,13 +180,15 @@ while len(running_threads) > 0:
     for thread in running_threads:
         thread.join(0.1)
         if not thread.isAlive():
-            print("Finished")
+            progress_counter += 1
+            bar.update(progress_counter)
             running_threads.remove(thread)
             if len(queued_threads) > 0:
-                print("Taken image from queue")
                 new_thread = queued_threads.pop()
                 new_thread.start()
                 running_threads.append(new_thread)
+
+bar.finish()
 
 with open(os.path.join("json", title + ".json"), "w") as outfile:
     json.dump(parsed_json, outfile)
