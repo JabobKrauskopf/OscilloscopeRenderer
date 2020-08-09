@@ -1,3 +1,4 @@
+from alive_progress import alive_bar
 import cv2
 import numpy as np
 import pafy
@@ -7,11 +8,10 @@ import re
 import threading
 import json
 import sys
-import progressbar
 
 number_of_threads = 30
 
-url = "https://www.youtube.com/watch?v=sdduPpnqre4"
+url = "https://www.youtube.com/watch?v=u1oHeraRxEw"
 vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub(r"\s", "_", video.title)
@@ -145,6 +145,9 @@ while True:
     if frame_number % 2 == 0:
         try:
             image = cv2.Canny(frame, 50, 200)
+            image = cv2.resize(
+                image, (int(480 * (len(image[0]) / len(image))), int(480))
+            )
             print("Saved image to stack " + str(frame_number))
             cv2.imshow("frame", image)
             if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -159,14 +162,6 @@ while True:
             break
     frame_number += 1
 
-
-bar = progressbar.ProgressBar(
-    maxval=len(frames),
-    widgets=[progressbar.Bar("=", "[", "]"), " ", progressbar.Percentage()],
-)
-bar.start()
-
-progress_counter = 0
 frame_index = 0
 queued_threads = []
 for frame in frames:
@@ -176,19 +171,17 @@ for frame in frames:
 running_threads = queued_threads[:number_of_threads]
 [thread.start() for thread in running_threads]
 
-while len(running_threads) > 0:
-    for thread in running_threads:
-        thread.join(0.1)
-        if not thread.isAlive():
-            progress_counter += 1
-            bar.update(progress_counter)
-            running_threads.remove(thread)
-            if len(queued_threads) > 0:
-                new_thread = queued_threads.pop()
-                new_thread.start()
-                running_threads.append(new_thread)
-
-bar.finish()
+with alive_bar(len(frames)) as bar:
+    while len(running_threads) > 0:
+        for thread in running_threads:
+            thread.join(0.01)
+            if not thread.isAlive():
+                bar()
+                running_threads.remove(thread)
+                if len(queued_threads) > 0:
+                    new_thread = queued_threads.pop()
+                    new_thread.start()
+                    running_threads.append(new_thread)
 
 with open(os.path.join("json", title + ".json"), "w") as outfile:
     json.dump(parsed_json, outfile)
