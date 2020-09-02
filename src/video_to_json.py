@@ -8,10 +8,11 @@ import re
 import threading
 import json
 import sys
+import time
 
-number_of_threads = 30
+number_of_threads = 100
 
-url = "https://www.youtube.com/watch?v=VYOjWnS4cMY"
+url = "https://www.youtube.com/watch?v=fdixQDPA2h0"
 vPafy = pafy.new(url)
 video = vPafy.getbest()
 title = re.sub(r"\s", "_", video.title)
@@ -57,11 +58,7 @@ def find_starting_point(
 
 
 def depth_first_search(
-    visited: np.array,
-    image: np.array,
-    point: tuple,
-    path: list,
-    iteration_depth: int,
+    visited: np.array, image: np.array, point: tuple, path: list, iteration_depth: int,
 ):
     x, y = point
     if visited[x][y] or image[x][y] <= 0:
@@ -149,16 +146,17 @@ while True:
     if frame_number % 2 == 0:
         try:
             canny_image = cv2.Canny(frame, 50, 200)
-            canny_image = cv2.resize(
-                canny_image, (int(360 * (len(canny_image[0]) / len(canny_image))), int(360))
+            resized_image = cv2.resize(
+                canny_image,
+                (int(360 * (len(canny_image[0]) / len(canny_image))), int(360)),
             )
             print("Saved image to stack " + str(frame_number))
-            cv2.imshow("frame", canny_image)
+            cv2.imshow("frame", resized_image)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 cap.release()
                 cv2.destroyAllWindows()
                 break
-            frames.append(canny_image)
+            frames.append(resized_image)
         except:
             print("Finished saving images")
             cap.release()
@@ -166,27 +164,39 @@ while True:
             break
     frame_number += 1
 
-frame_index = 0
-queued_threads = []
-for frame in frames:
-    x = threading.Thread(target=convert_image, args=(frame, frame_index))
-    queued_threads.append(x)
-    frame_index += 1
-running_threads = queued_threads[:number_of_threads]
-queued_threads = queued_threads[number_of_threads:]
-[thread.start() for thread in running_threads]
+threadLimiter = threading.BoundedSemaphore(number_of_threads)
 
+
+class EncodeThread(threading.Thread):
+    def __init__(self, frame, frame_index, bar):
+        threading.Thread.__init__(self)
+        self.frame = frame
+        self.frame_index = frame_index
+
+    def run(self):
+        threadLimiter.acquire()
+        try:
+            convert_image(frame, frame_index)
+        finally:
+            bar()
+            threadLimiter.release()
+
+
+frame_index = 0
+threads = []
 with alive_bar(len(frames)) as bar:
-    while len(running_threads) > 0:
-        for thread in running_threads:
-            thread.join(0.001)
-            if not thread.isAlive():
-                bar()
-                running_threads.remove(thread)
-                if len(queued_threads) > 0:
-                    new_thread = queued_threads.pop()
-                    new_thread.start()
-                    running_threads.append(new_thread)
+    for frame in frames:
+        x = EncodeThread(frame, frame_index, bar)
+        threads.append(x)
+        frame_index += 1
+
+    for thread in threads:
+        while threading.active_count() > number_of_threads :
+            time.sleep(5)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
 
 with open(os.path.join("json", title + ".json"), "w") as outfile:
     json.dump(parsed_json, outfile)
