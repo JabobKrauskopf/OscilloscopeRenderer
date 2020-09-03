@@ -18,12 +18,15 @@ def usage():
         " --fps=<fps>                     OPTIONAL: framerate the video will be rendered at."
     )
     print(
+        " --rep=<repititions>             OPTIONAL: Repetitions of the Video."
+    )
+    print(
         " -a, --auto                      OPTIONAL: Automatically detects the framerate."
     )
     print(
         " --sample_rate=<sample_rate>     OPTIONAL: Sample_rate the video will be rendered with."
     )
-    print(" -h, --help                      OPTIONAL: Show tis message and exit.")
+    print(" -h, --help                    OPTIONAL: Show tis message and exit.")
 
 
 sample_rate = 192000
@@ -32,28 +35,32 @@ fps = 30
 
 input_file = ""
 
+repetition = 1
+
 try:
     opts, args = getopt.getopt(
         sys.argv[1:], "ha", ["file=", "fps=", "sample_rate=", "--help", "--auto"]
     )
-    found_file = 0
+    found_file = False
     already_set = False
     for opt, arg in opts:
         if opt == "--file":
             input_file = arg
-            found_file = 1
+            found_file = True
         elif opt == "--sample_rate":
             sample_rate = arg
         elif opt == "--fps" and not already_set:
             fps = arg
             already_set = True
+        elif opt == "--rep":
+            repetition = arg
         elif opt in ["-a", "--auto"] and not already_set:
             fps = 30
             already_set = True
         elif opt in ("-h", "--help"):
             usage()
             sys.exit()
-    if found_file == 0:
+    if not found_file:
         print("Argument --file=<file_path> not found")
         usage()
         sys.exit(2)
@@ -117,6 +124,10 @@ with alive_bar(len(frames)) as bar:
 
 left_audio = left_audio.astype(np.int16)
 right_audio = right_audio.astype(np.int16)
+
+if repetition > 1:
+    left_audio = np.tile(left_audio, repetition)
+    right_audio = np.tile(right_audio, repetition)
 
 stereo_signal = np.zeros([int(len(left_audio)), 2], dtype=np.int16)
 stereo_signal[:, 1] = left_audio[:]
