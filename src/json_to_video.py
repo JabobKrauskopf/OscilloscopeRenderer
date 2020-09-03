@@ -3,7 +3,7 @@ import cv2
 import json
 import os
 
-with open("json/BURNS_-_When_I'm_Around_U_(Official_Music_Video).json") as json_file:
+with open("json/Kid_Francescoli_-_Moon_(Official_Video).json") as json_file:
     data = json.load(json_file)
 
 if not os.path.exists("video"):

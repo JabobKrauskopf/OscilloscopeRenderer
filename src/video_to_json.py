@@ -10,7 +10,7 @@ import json
 import sys
 import time
 
-number_of_threads = 100
+number_of_threads = 200
 
 url = "https://www.youtube.com/watch?v=fdixQDPA2h0"
 vPafy = pafy.new(url)
@@ -118,7 +118,7 @@ def depth_first_search(
     return path, visited, cache
 
 
-def convert_image(image, frame_number):
+def convert_image(image, frame_number, bar):
     parsed_json["sizeX"] = len(image[0])
     parsed_json["sizeY"] = len(image)
     path = []
@@ -137,6 +137,7 @@ def convert_image(image, frame_number):
                 visited_pixels, image, tuple(starting_point), path, 0
             )
     parsed_json["frames"].insert(frame_number, path)
+    bar()
 
 
 frame_number = 0
@@ -164,35 +165,17 @@ while True:
             break
     frame_number += 1
 
-threadLimiter = threading.BoundedSemaphore(number_of_threads)
-
-
-class EncodeThread(threading.Thread):
-    def __init__(self, frame, frame_index, bar):
-        threading.Thread.__init__(self)
-        self.frame = frame
-        self.frame_index = frame_index
-
-    def run(self):
-        threadLimiter.acquire()
-        try:
-            convert_image(frame, frame_index)
-        finally:
-            bar()
-            threadLimiter.release()
-
-
 frame_index = 0
 threads = []
 with alive_bar(len(frames)) as bar:
     for frame in frames:
-        x = EncodeThread(frame, frame_index, bar)
+        x = threading.Thread(target=convert_image, args=(frame, frame_index, bar))
         threads.append(x)
         frame_index += 1
 
     for thread in threads:
-        while threading.active_count() > number_of_threads :
-            time.sleep(5)
+        while threading.active_count() > number_of_threads:
+            time.sleep(0.01)
         thread.start()
 
     for thread in threads:
