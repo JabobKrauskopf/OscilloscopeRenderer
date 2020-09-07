@@ -21,6 +21,12 @@ def usage():
         " --rep=<repititions>             OPTIONAL: Repetitions of the Video."
     )
     print(
+        " --reverse                       OPTIONAL: In conjunction to --rep"
+    )
+    print(
+        " --rep=<repititions>             OPTIONAL: Repetitions of the Video."
+    )
+    print(
         " -a, --auto                      OPTIONAL: Automatically detects the framerate."
     )
     print(
@@ -31,15 +37,17 @@ def usage():
 
 sample_rate = 192000
 
-fps = 30
+fps = 60
 
 input_file = ""
 
 repetition = 1
 
+reverse = False
+
 try:
     opts, args = getopt.getopt(
-        sys.argv[1:], "ha", ["file=", "fps=", "sample_rate=", "--help", "--auto"]
+        sys.argv[1:], "ha", ["file=", "fps=", "rep=", "sample_rate=", "reverse", "help", "auto"]
     )
     found_file = False
     already_set = False
@@ -48,15 +56,17 @@ try:
             input_file = arg
             found_file = True
         elif opt == "--sample_rate":
-            sample_rate = arg
+            sample_rate = int(arg)
         elif opt == "--fps" and not already_set:
-            fps = arg
+            fps = int(arg)
             already_set = True
         elif opt == "--rep":
-            repetition = arg
+            repetition = int(arg)
         elif opt in ["-a", "--auto"] and not already_set:
             fps = 30
             already_set = True
+        elif opt == "--reverse":
+            reverse = True
         elif opt in ("-h", "--help"):
             usage()
             sys.exit()
@@ -64,7 +74,8 @@ try:
         print("Argument --file=<file_path> not found")
         usage()
         sys.exit(2)
-except getopt.GetoptError:
+except getopt.GetoptError as e:
+    print(e)
     print("oscilloscope.py [OPTIONS]")
     sys.exit(2)
 
@@ -126,6 +137,9 @@ left_audio = left_audio.astype(np.int16)
 right_audio = right_audio.astype(np.int16)
 
 if repetition > 1:
+    if reverse:
+        left_audio = np.concatenate([left_audio, left_audio[::-1]])
+        right_audio = np.concatenate([right_audio, right_audio[::-1]])
     left_audio = np.tile(left_audio, repetition)
     right_audio = np.tile(right_audio, repetition)
 
