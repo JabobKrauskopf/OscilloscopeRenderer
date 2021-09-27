@@ -2,7 +2,6 @@ from typing import List, Tuple
 import sounddevice as sd
 import numpy as np
 import datetime
-import pyaudio
 
 import cv2
 
@@ -72,15 +71,6 @@ sd.default.samplerate = sample_rate
 cam.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[1])
 cam.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[0])
 
-p = pyaudio.PyAudio()
-
-stream = p.open(
-    rate=sample_rate,
-    channels=2,
-    format=p.get_format_from_width(2),
-    output=True,
-)
-
 last_time = datetime.datetime.now()
 
 last_path = np.array([(5000,0), (5000,0)])
@@ -148,7 +138,7 @@ while cam.isOpened():
     stereo_signal = np.zeros([int(len(local_left)), 2], dtype=np.int16)
     stereo_signal[:, 1] = local_left[:]
     stereo_signal[:, 0] = local_right[:]
-    # print(stereo_signal.shape)
+    
     sd.play(stereo_signal)
 
     if cv2.waitKey(1) == ord("q"):
